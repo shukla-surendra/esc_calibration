@@ -1,47 +1,114 @@
-#define FL 18
-#define FR 19
+#include <ESP32Servo.h>
+
+// =====================================
+// MOTOR PINS
+// =====================================
+#define FL 25
+#define FR 26
 #define RL 27
 #define RR 14
 
-#define PWM_FREQ 50
-#define PWM_RES 16
+// =====================================
+// ESC RANGE
+// =====================================
+#define MIN_US 1000
+#define MAX_US 2000
 
-uint32_t usToDuty(int us)
+// =====================================
+// SERVO OBJECTS
+// =====================================
+Servo motorFL;
+Servo motorFR;
+Servo motorRL;
+Servo motorRR;
+
+// =====================================
+// WRITE ALL MOTORS
+// =====================================
+void writeAll(int us)
 {
-  return map(us, 1000, 2000, 3276, 6553);
+  motorFL.writeMicroseconds(us);
+  motorFR.writeMicroseconds(us);
+  motorRL.writeMicroseconds(us);
+  motorRR.writeMicroseconds(us);
 }
 
 void setup()
 {
   Serial.begin(115200);
 
-  ledcAttach(FL, PWM_FREQ, PWM_RES);
-  ledcAttach(FR, PWM_FREQ, PWM_RES);
-  ledcAttach(RL, PWM_FREQ, PWM_RES);
-  ledcAttach(RR, PWM_FREQ, PWM_RES);
+  Serial.println();
+  Serial.println("================================");
+  Serial.println("ESC CALIBRATION MODE");
+  Serial.println("REMOVE ALL PROPELLERS");
+  Serial.println("================================");
 
-  Serial.println("Disconnect battery now...");
-  delay(4000);
+  // =================================
+  // ALLOCATE PWM TIMERS
+  // =================================
+  ESP32PWM::allocateTimer(0);
+  ESP32PWM::allocateTimer(1);
+  ESP32PWM::allocateTimer(2);
+  ESP32PWM::allocateTimer(3);
 
-  Serial.println("Connect battery NOW");
+  // =================================
+  // SET PWM FREQUENCY
+  // =================================
+  motorFL.setPeriodHertz(50);
+  motorFR.setPeriodHertz(50);
+  motorRL.setPeriodHertz(50);
+  motorRR.setPeriodHertz(50);
 
-  ledcWrite(FL, usToDuty(2000));
-  ledcWrite(FR, usToDuty(2000));
-  ledcWrite(RL, usToDuty(2000));
-  ledcWrite(RR, usToDuty(2000));
+  // =================================
+  // ATTACH ESC PINS
+  // =================================
+  motorFL.attach(FL, MIN_US, MAX_US);
+  motorFR.attach(FR, MIN_US, MAX_US);
+  motorRL.attach(RL, MIN_US, MAX_US);
+  motorRR.attach(RR, MIN_US, MAX_US);
 
+  // =================================
+  // STEP 1
+  // =================================
+  Serial.println();
+  Serial.println("Disconnect ESC battery NOW");
   delay(5000);
 
-  Serial.println("Setting MIN throttle");
+  // =================================
+  // STEP 2 - SEND MAX THROTTLE
+  // =================================
+  Serial.println();
+  Serial.println("Sending MAX throttle...");
+  writeAll(MAX_US);
 
-  ledcWrite(FL, usToDuty(1000));
-  ledcWrite(FR, usToDuty(1000));
-  ledcWrite(RL, usToDuty(1000));
-  ledcWrite(RR, usToDuty(1000));
+  Serial.println("Connect ESC battery NOW");
+  Serial.println("Wait for calibration beeps");
 
-  delay(5000);
+  delay(8000);
 
-  Serial.println("Calibration done");
+  // =================================
+  // STEP 3 - SEND MIN THROTTLE
+  // =================================
+  Serial.println();
+  Serial.println("Sending MIN throttle...");
+  writeAll(MIN_US);
+
+  Serial.println("Waiting for confirmation beeps");
+
+  delay(8000);
+
+  // =================================
+  // DONE
+  // =================================
+  Serial.println();
+  Serial.println("================================");
+  Serial.println("ESC CALIBRATION COMPLETE");
+  Serial.println("================================");
+
+  // Safety
+  writeAll(MIN_US);
 }
 
-void loop(){}
+void loop()
+{
+}
